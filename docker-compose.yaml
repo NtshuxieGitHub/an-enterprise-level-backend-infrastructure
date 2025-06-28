@@ -1,0 +1,31 @@
+version: "3"
+services:
+  app:
+    build: .
+    container_name: todo-app
+    environment:
+      - DATABASE_URL=postgresql://postgres:Hlamalani98%40@db.psolqojzvqggjmuuhwlu.supabase.co:5432/postgres
+      - JWT_SECRET_KEY=jwt_secret_key
+      - NODE_ENV=development
+      - PORT=5005
+    ports:
+      - "5005:5005"
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db:
+    image: postgres:13-alpine
+    container_name: postgres-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Hlamalani98@
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

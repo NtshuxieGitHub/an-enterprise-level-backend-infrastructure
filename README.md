@@ -1,6 +1,6 @@
 # 📝 To-Do App Backend
 
-This is the backend system for a **Vanilla JS To-Do Application**, built with **Node.js**, **SQLite**, **JWT**, and **bcrypt**.
+This is the backend system for a **Vanilla JS To-Do Application**, built with **Node.js**, **PostgreSQL**, **JWT**, **Docker**, and **bcrypt**.
 
 ---
 
@@ -8,10 +8,11 @@ This is the backend system for a **Vanilla JS To-Do Application**, built with **
 
 - **Node.js** – Runtime environment
 - **Express.js** – Web framework
-- **SQLite** – Lightweight relational database
+- **PostgreSQl** –Enterprise-level database
 - **bcrypt** – Password hashing
 - **JWT (JSON Web Token)** – Authentication
 - **Vanilla JS (Frontend)** – Interacts with this backend
+- **Docker**
 
 ---
 

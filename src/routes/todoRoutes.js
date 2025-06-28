@@ -1,5 +1,4 @@
 import express from "express";
-import sqlDb from "../db.js";
 import prisma from "../prismaClient.js";
 
 const router = express.Router();

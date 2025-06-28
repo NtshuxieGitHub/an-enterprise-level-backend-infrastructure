@@ -1,7 +1,6 @@
 // Import necessary modules
 import express from "express";
 import jwt from "jsonwebtoken";
-import sqlDb from "../db.js";
 import bcrypt from "bcrypt";
 import prisma from "../prismaClient.js";
 
