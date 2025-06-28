@@ -1,15 +1,18 @@
 import express from "express";
 import sqlDb from "../db.js";
+import prisma from "../prismaClient.js";
 
 const router = express.Router();
 
 // Get all todos when the /todos endpoint is hit
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
+  // Get all todos for the user id
   try {
-    // Prepare the SQL statement to select all todos for the user
-    const fetchAllTodos = sqlDb.prepare(`
-            SELECT * FROM todos where user_id = ?`);
-    const todos = fetchAllTodos.all(req.userId);
+    const todos = await prisma.todos.findMany({
+      where: {
+        userId: req.userId,
+      },
+    });
 
     // Send the todos as a JSON response
     res.json(todos);
@@ -20,21 +23,21 @@ router.get("/", (req, res) => {
 });
 
 // Create a new todo when the /todos endpoint is hit
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   try {
     // Check if the request body contains task
     const { task } = req.body;
 
-    // Prepare the SQL statement to insert a new todo
-    const addNewTodo = sqlDb.prepare(`
-      INSERT INTO todos (user_id, task) VALUES (?, ?)
-      `);
-
-    // Execute the SQL statement with the provided user ID and task
-    const result = addNewTodo.run(req.userId, task);
+    // Save new todo data in the SQLite database
+    const todo = await prisma.todo.create({
+      data: {
+        task,
+        userId: req.userId,
+      },
+    });
 
     // Send the new todo as a JSON response
-    res.json({ id: result.lastInsertRowid, task, completed: 0 });
+    res.json(todo);
   } catch (error) {
     // Handle errors
     console.error(error.message);
@@ -43,44 +46,49 @@ router.post("/", (req, res) => {
 });
 
 // Update an existing todo when the /todos/:id endpoint is hit - reference the id
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     // Check if the request body contains completed
     const { completed, task } = req.body;
     const { id } = req.params;
 
-    // Collect fields to update
-    const fields = [];
-    const values = [];
+    // Dynamicall build data to update
+    const dataToUpdate = {};
+    if (task !== undefined) dataToUpdate.task = task;
+    if (completed !== undefined) dataToUpdate.completed = !!completed;
 
-    // Push the field and value to the arrays if completed is defined
-    if (completed !== undefined) {
-      fields.push("completed = ?");
-      values.push(completed);
-    }
-
-    // Push the field and value to the arrays if task is defined
-    if (task !== undefined) {
-      fields.push("task = ?");
-      values.push(task);
-    }
-
-    if (fields.length === 0) {
+    // If there are no keys in the dataToUpdate object, return an error
+    if (Object.keys(dataToUpdate).length === 0) {
       return res.status(400).json({ error: "No fields to update" });
     }
 
-    // Add id is the last value
-    values.push(id);
+    // Check that the user has an existing todo with the provided id
+    const existingTodo = await prisma.todo.findUnique({
+      where: {
+        id: parseInt(id),
+      },
+    });
 
-    // Prepare the SQL statement to update a todo
-    const sqlQuery = `UPDATE todos SET ${fields.join(", ")} WHERE id = ?`;
-    const updateTodo = sqlDb.prepare(sqlQuery);
+    // If the todo does not exist, return an error
+    if (!existingTodo) {
+      return res.status(404).json({ error: "Todo not found" });
+    }
 
-    // Execute the SQL statement with the provided completed and id
-    updateTodo.run(...values);
+    // Check that the todo belongs to the user
+    if (existingTodo.userId !== req.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Update the todo
+    const updatedTodo = await prisma.todo.update({
+      where: {
+        id: parseInt(id),
+      },
+      data: dataToUpdate,
+    });
 
     // Send the updated todo as a JSON response
-    res.json({ message: "Todo updated" });
+    res.json(updatedTodo);
   } catch (error) {
     // Handle errors
     console.error(error.message);
@@ -89,32 +97,18 @@ router.put("/:id", (req, res) => {
 });
 
 // Delete a todo when the /todos/:id endpoint is hit - reference the id
-router.delete("/:id", (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     // Destricture the id from request parameters
     const { id } = req.params;
     const { userId } = req;
 
-    // Prepare the SQL statement to delete a todo
-    /* 
-    this works fine but only checks the task id and does not check
-     the user id - need to be able to check both for an added layer 
-     of security
-    */
-    // const deleteTodo = sqlDb.prepare(`
-    //   DELETE FROM todos WHERE id = ?
-    //   `);
-
-    // // Execute the SQL statement with the provided id
-    // deleteTodo.run(id);
-
-    // Prepare the SQL statement to delete a todo
-    const deleteTodo = sqlDb.prepare(`
-      DELETE FROM todos WHERE id = ? AND user_id = ?
-      `);
-
-    // Execute the SQL statement with the provided id
-    deleteTodo.run(id, userId);
+    await prisma.todo.delete({
+      where: {
+        id: parseInt(id),
+        userId,
+      },
+    });
 
     // Send the deleted todo as a JSON response
     res.json({
